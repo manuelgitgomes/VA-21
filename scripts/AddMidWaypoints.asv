@@ -1,0 +1,9 @@
+function newW=AddMidWaypoints(W)
+
+[lins, cols] =  size(W);
+newW = zeros([2*lins-1, cols]);
+
+for i = 1:lins
+    newW(2*lins-1, :) = W(lins, :);
+    newW(2*lins, :) = (W(lins+1) + W(lins, :)) 
+end
