@@ -12,6 +12,14 @@ carObj = [];
 barObj = [];
 cycObj = [];
 pedObj = [];
+carNum = 0;
+cycNum = 0;
+pedNum = 0;
+posDet = zeros(2, 2);
+carDist = 5;
+cycDist = 3;
+pedDist = 1.75;
+count = false;
 
 % Load data
 [allData, scenario, sensors] = scene1();
@@ -105,6 +113,8 @@ for n=1:numel(allData)
     end
 end
 
+
+% Plot detections
 subplot(2, 3, 2)
 plot(radarObj(:,1), radarObj(:,2), 'or', 'DisplayName', 'Radar Detections')
 
@@ -113,5 +123,60 @@ plot(carObj(:,1), carObj(:,2), 'or', 'DisplayName', 'Vehicle Detections')
 plot(cycObj(:,1), cycObj(:,2), 'og', 'DisplayName', 'Bicycle Detections')
 plot(pedObj(:,1), pedObj(:,2), 'ob', 'DisplayName', 'Pedestrian Detections')
 
+% Order matrixes
+carObj = sortrows(carObj(:, [1, 2]));
+cycObj = sortrows(cycObj(:, [1, 2]));
+pedObj = sortrows(pedObj(:, [1, 2]));
 
 
+% Calculating the number of objects
+for i = 1:length(carObj(:,1))
+    posDet(1, :) = carObj(i,:);
+    for ii = i+1:length(carObj(:,1))
+        posDet(2, :) = carObj(ii,:);
+        distance = pdist(posDet, 'euclidean');
+        if distance < carDist
+            if ~count
+                carNum = carNum + 1;
+                count = true;
+            end
+            break
+        elseif ii == length(carObj(2:end,1))
+            count = false;
+        end
+    end
+end
+
+for i = 1:length(cycObj(:,1))
+    posDet(1, :) = cycObj(i,:);
+    for ii = i+1:length(cycObj(:,1))
+        posDet(2, :) = cycObj(ii,:);
+        distance = pdist(posDet, 'euclidean');
+        if distance < cycDist
+            if ~count
+                cycNum = cycNum + 1;
+                count = true;
+            end
+            break
+        elseif ii == length(cycObj(2:end,1))
+            count = false;
+        end
+    end
+end
+
+for i = 1:length(pedObj(:,1))
+    posDet(1, :) = pedObj(i,:);
+    for ii = i+1:length(pedObj(:,1))
+        posDet(2, :) = pedObj(ii,:);
+        distance = pdist(posDet, 'euclidean');
+        if distance < pedDist
+            if ~count
+                pedNum = pedNum + 1;
+                count = true;
+            end
+            break
+        elseif ii == length(pedObj(2:end,1))
+            count = false;
+        end
+    end
+end
