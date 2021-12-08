@@ -20,6 +20,11 @@ carDist = 5;
 cycDist = 3;
 pedDist = 1.75;
 count = false;
+PPAPDist = 0;
+IMSDist = 0;
+interval = 30;
+ppapDet = zeros(2, 2);
+imsDet = zeros(2, 2);
 
 % Load data
 [allData, scenario, sensors] = scene1();
@@ -33,10 +38,29 @@ end
 t = [allData.Time];
 
 % Plotting ego position with Actor Poses
-% PP = cell2mat(arrayfun(@(S) S.ActorPoses(1).Position', allData, 'UniformOutput', false))';
+PPAP = cell2mat(arrayfun(@(S) S.ActorPoses(1).Position', allData, 'UniformOutput', false))';
 
 % Plotting ego position with IMS Measurements
 PP = cell2mat(arrayfun(@(S) S.INSMeasurements{1}.Position', allData, 'UniformOutput', false))';
+
+% Calculating distance travelled
+% Using Actor Poses
+for i = 1:length(PPAP)-1
+    ppapDet(1, :) = PPAP(i);
+    ppapDet(2, :) = PPAP(i+1);
+    PPAPDist = PPAPDist + pdist(ppapDet);
+end
+
+% Using Actor Poses
+for i = 1:ceil(length(PP)/interval)-1
+    imsDet(1, :) = PP(interval*i);
+    if i == ceil(length(PP)/interval)-1
+        imsDet(2, :) = PP(end);
+    else
+        imsDet(2, :) = PP(interval*(i+1));
+    end
+    IMSDist = IMSDist + pdist(imsDet);
+end
 
 % Creating plots
 subplot(2, 3, 1)
