@@ -157,6 +157,7 @@ figure(2)
 show(occGrid)
 
 %% Exercise 4
+clear, clc, close all
 map = binaryOccupancyMap(100, 80, 1);
 occ = zeros(80, 100);
 
@@ -214,6 +215,9 @@ title('Initial Route to Package')
 obstacleWidth = 6;
 obstacleHeight = 11;
 obstacleBottomLeftLocation = [34 49];
+values = ones(obstacleHeight, obstacleWidth);
+setOccupancy(map, obstacleBottomLeftLocation, values)
+obstacleBottomLeftLocation = [54 49];
 values = ones(obstacleHeight, obstacleWidth);
 setOccupancy(map, obstacleBottomLeftLocation, values)
 
