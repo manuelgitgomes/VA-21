@@ -12,6 +12,7 @@ carObj = [];
 barObj = [];
 cycObj = [];
 pedObj = [];
+
 carNum = 0;
 cycNum = 0;
 pedNum = 0;
@@ -19,12 +20,14 @@ posDet = zeros(2, 2);
 carDist = 5;
 cycDist = 3;
 pedDist = 1.75;
+barDist = 2;
 count = false;
 PPAPDist = 0;
 IMSDist = 0;
-interval = 30;
+interval = 1;
 ppapDet = zeros(2, 2);
 imsDet = zeros(2, 2);
+counter = 0;
 
 % Load data
 [allData, scenario, sensors] = scene1();
@@ -38,18 +41,18 @@ end
 t = [allData.Time];
 
 % Plotting ego position with Actor Poses
-PPAP = cell2mat(arrayfun(@(S) S.ActorPoses(1).Position', allData, 'UniformOutput', false))';
+PP = cell2mat(arrayfun(@(S) S.ActorPoses(1).Position', allData, 'UniformOutput', false))';
 
 % Plotting ego position with IMS Measurements
-PP = cell2mat(arrayfun(@(S) S.INSMeasurements{1}.Position', allData, 'UniformOutput', false))';
+% PP = cell2mat(arrayfun(@(S) S.INSMeasurements{1}.Position', allData, 'UniformOutput', false))';
 
 % Calculating distance travelled
-% Using Actor Poses
-for i = 1:length(PPAP)-1
-    ppapDet(1, :) = PPAP(i);
-    ppapDet(2, :) = PPAP(i+1);
-    PPAPDist = PPAPDist + pdist(ppapDet);
-end
+% % Using Actor Poses
+% for i = 1:length(PPAP)-1
+%     ppapDet(1, :) = PPAP(i);
+%     ppapDet(2, :) = PPAP(i+1);
+%     PPAPDist = PPAPDist + pdist(ppapDet);
+% end
 
 % Using Actor Poses
 for i = 1:ceil(length(PP)/interval)-1
@@ -204,3 +207,22 @@ for i = 1:length(pedObj(:,1))
         end
     end
 end
+
+% Defining barriers
+barObj = radarObj;
+barMask = zeros(size(barObj));
+
+for i = 1:length(radarObj)
+    for ii = 1:length(cameraObj)
+        distance = pdist([radarObj(i,1:2); cameraObj(ii,1:2)]);
+        counter = counter + 1;
+        if distance < barDist
+            barMask(i, :) = [1, 1, 1, 1];
+            break
+        end
+    end
+end
+
+barObj(logical(barMask(:,1)),:) = [];
+plot(barObj(:,1), barObj(:,2), 'oy', 'DisplayName', 'Barrier Detections')
+
