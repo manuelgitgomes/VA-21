@@ -12,22 +12,26 @@ carObj = [];
 barObj = [];
 cycObj = [];
 pedObj = [];
-
 carNum = 0;
 cycNum = 0;
 pedNum = 0;
 posDet = zeros(2, 2);
+objDist = 3;
 carDist = 5;
 cycDist = 3;
 pedDist = 1.75;
-barDist = 2;
+radDist = 2;
+barDist = 1;
 count = false;
+object = false;
 PPAPDist = 0;
 IMSDist = 0;
 interval = 1;
 ppapDet = zeros(2, 2);
 imsDet = zeros(2, 2);
 counter = 0;
+unused = [];
+carCoords = {};
 
 % Load data
 [allData, scenario, sensors] = scene1();
@@ -151,35 +155,183 @@ plot(cycObj(:,1), cycObj(:,2), 'og', 'DisplayName', 'Bicycle Detections')
 plot(pedObj(:,1), pedObj(:,2), 'ob', 'DisplayName', 'Pedestrian Detections')
 
 % Order matrixes
-carObj = sortrows(carObj(:, [1, 2]));
-cycObj = sortrows(cycObj(:, [1, 2]));
-pedObj = sortrows(pedObj(:, [1, 2]));
+sortcarObj = sortrows(carObj(:, [1, 2]));
+sortcycObj = sortrows(cycObj(:, [1, 2]));
+sortpedObj = sortrows(pedObj(:, [1, 2]));
 
 
 % Calculating the number of objects
-for i = 1:length(carObj(:,1))
-    posDet(1, :) = carObj(i,:);
-    for ii = i+1:length(carObj(:,1))
-        posDet(2, :) = carObj(ii,:);
-        distance = pdist(posDet, 'euclidean');
-        if distance < carDist
-            if ~count
-                carNum = carNum + 1;
-                count = true;
+
+
+for i = 1:length(sortcarObj(:,1))
+    curr = sortcarObj(i,:);
+    dist = sqrt((sortcarObj(i+1:end,1) - curr(1)).^2 + (sortcarObj(i+1:end,2) - curr(2)).^2);
+    mask = dist < objDist;
+    num = sum(mask);
+    str = strcat('Found ' int2str(num), ' cars nearby.');
+    disp(str)
+    if num > 0
+        if ~count
+            carNum = carNum + 1;
+            count = true;
+            carCoords{end + 1} = [];
+        end
+        carCoords{end}(end+1, :) = curr;
+        idxs = find(mask) + i;
+        minIdx = find(dist == min(dist)) + i;
+        v = sortcarObj(minIdx, :);
+       
+        idxs = idxs(~(idxs==minIdx));
+       
+        for ii = 1:length(idxs)
+            un = sortcarObj(idxs(ii),:);
+            if isempty(unused)
+                unused(end+1, :) = un;
+            else
+                [~,index] = ismember(unused,un,'rows');
+                if sum(index) == 0
+                    unused(end+1, :) = un;
+                end
             end
+        end
+        sortcarObj(minIdx, :) = sortcarObj(i+1, :);
+        sortcarObj(i+1, :) = v;
+        if ~isempty(unused)
+            [~,index] = ismember(unused, v ,'rows');
+            unused = unused(~index, :);
+        end
+    elseif ~isempty(unused)
+        [idx, ~] = find(sortcarObj==unused(1,:));
+        unused = unused(2:end, :);
+        curr = sortcarObj(idx(1), :);
+        sortcarObj(idx(1), :) = sortcarObj(i, :);
+        sortcarObj(i, :) = curr;
+        dist = sqrt((sortcarObj(i+1:end,1) - curr(1)).^2 + (sortcarObj(i+1:end,2) - curr(2)).^2);
+        mask = dist < objDist;
+        num = sum(mask);
+        str = strcat('Found ', int2str(num), ' cars nearby, after backtracking.');
+        disp(str)
+        if num > 0
+            carCoords{end}(end+1, :) = curr;
+            idxs = find(mask) + i;
+            minIdx = find(dist == min(dist)) + i;
+            v = sortcarObj(minIdx, :);
+           
+            idxs = idxs(~(idxs==minIdx));
+           
+            for ii = 1:length(idxs)
+                un = sortcarObj(idxs(ii),:);
+                if isempty(unused)
+                    unused(end+1, :) = un;
+                else
+                    [~,index] = ismember(unused,un,'rows');
+                    if sum(index) == 0
+                        unused(end+1, :) = un;
+                    end
+                end
+            end
+            sortcarObj(minIdx, :) = sortcarObj(i+1, :);
+            sortcarObj(i+1, :) = v;
+            if ~isempty(unused)
+                [~,index] = ismember(unused, v,'rows');
+                unused = unused(~index, :);
+            end
+        end
+    else
+        disp('End of Object')
+        count = false;
+    end
+     sortcarObj(i,:) = NaN;
+end
+
+pause()
+
+% for i = 1:length(sortcarObj(:,1))
+%     curr = sortcarObj(i,:);
+%     if ~isnan(curr(1))
+%         carNum = carNum +1;
+%         dist = sqrt((sortcarObj(:,1) - curr(1)).^2 + (sortcarObj(:,2) - curr(2)).^2);
+%         mask = dist < objDist;
+%         sortcarObj(mask,:) = NaN;
+% 
+%     end
+% end
+            
+% 
+% for i = 1:length(carObj(:,1))
+%     posDet(1, :) = carObj(i,:);
+%     for ii = i+1:length(carObj(:,1))
+%         posDet(2, :) = carObj(ii,:);
+%         distance = pdist(posDet, 'euclidean');
+%         if distance < carDist
+%             if ~count
+%                 carNum = carNum + 1;
+%                 count = true;
+%             end
+%             break
+%         elseif ii == length(carObj(2:end,1))
+%             count = false;
+%         end
+%     end
+% end
+% 
+% for i = 1:length(cycObj(:,1))
+%     posDet(1, :) = cycObj(i,:);
+%     for ii = i+1:length(cycObj(:,1))
+%         posDet(2, :) = cycObj(ii,:);
+%         distance = pdist(posDet, 'euclidean');
+%         if distance < cycDist
+%             if ~count
+%                 cycNum = cycNum + 1;
+%                 count = true;
+%             end
+%             break
+%         elseif ii == length(cycObj(2:end,1))
+%             count = false;
+%         end
+%     end
+% end
+% 
+% for i = 1:length(pedObj(:,1))
+%     posDet(1, :) = pedObj(i,:);
+%     for ii = i+1:length(pedObj(:,1))
+%         posDet(2, :) = pedObj(ii,:);
+%         distance = pdist(posDet, 'euclidean');
+%         if distance < pedDist
+%             if ~count
+%                 pedNum = pedNum + 1;
+%                 count = true;
+%             end
+%             break
+%         elseif ii == length(pedObj(2:end,1))
+%             count = false;
+%         end
+%     end
+% end
+% 
+% 
+% Defining barriers
+barObj = radarObj;
+barMask = zeros(size(barObj));
+
+for i = 1:length(radarObj)
+    for ii = 1:length(cameraObj)
+        distance = pdist([radarObj(i,1:2); cameraObj(ii,1:2)]);
+        if distance < radDist
+            barMask(i, :) = [1, 1, 1, 1];
             break
-        elseif ii == length(carObj(2:end,1))
-            count = false;
         end
     end
 end
 
-for i = 1:length(cycObj(:,1))
-    posDet(1, :) = cycObj(i,:);
-    for ii = i+1:length(cycObj(:,1))
-        posDet(2, :) = cycObj(ii,:);
+barObj(logical(barMask(:,1)),:) = [];
+barMask = zeros(size(barObj));
+for i = 1:length(barObj(:,1))
+    posDet(1, :) = barObj(i,:);
+    for ii = i+1:length(barObj(:,1))
+        posDet(2, :) = barObj(ii,:);
         distance = pdist(posDet, 'euclidean');
-        if distance < cycDist
+        if distance < barDist
             if ~count
                 cycNum = cycNum + 1;
                 count = true;
@@ -191,38 +343,6 @@ for i = 1:length(cycObj(:,1))
     end
 end
 
-for i = 1:length(pedObj(:,1))
-    posDet(1, :) = pedObj(i,:);
-    for ii = i+1:length(pedObj(:,1))
-        posDet(2, :) = pedObj(ii,:);
-        distance = pdist(posDet, 'euclidean');
-        if distance < pedDist
-            if ~count
-                pedNum = pedNum + 1;
-                count = true;
-            end
-            break
-        elseif ii == length(pedObj(2:end,1))
-            count = false;
-        end
-    end
-end
 
-% Defining barriers
-barObj = radarObj;
-barMask = zeros(size(barObj));
-
-for i = 1:length(radarObj)
-    for ii = 1:length(cameraObj)
-        distance = pdist([radarObj(i,1:2); cameraObj(ii,1:2)]);
-        counter = counter + 1;
-        if distance < barDist
-            barMask(i, :) = [1, 1, 1, 1];
-            break
-        end
-    end
-end
-
-barObj(logical(barMask(:,1)),:) = [];
 plot(barObj(:,1), barObj(:,2), 'oy', 'DisplayName', 'Barrier Detections')
 
