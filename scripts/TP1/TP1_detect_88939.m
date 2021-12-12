@@ -6,7 +6,7 @@ addpath('TP1/')
 clear, clc, close all
 
 % Load data
-[allData, scenario, sensors] = scene6();
+[allData, scenario, sensors] = TP1_DSD_88939();
 
 % Starting variables
 radarObj = [];
