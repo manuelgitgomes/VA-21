@@ -15,13 +15,9 @@ pedObj = [];
 carNum = 0;
 cycNum = 0;
 pedNum = 0;
+barNum = 0;
 posDet = zeros(2, 2);
 objDist = 3;
-carDist = 5;
-cycDist = 3;
-pedDist = 1.75;
-radDist = 2;
-barDist = 1;
 count = false;
 object = false;
 PPAPDist = 0;
@@ -32,6 +28,9 @@ imsDet = zeros(2, 2);
 counter = 0;
 unused = [];
 carCoords = {};
+cycCoords = {};
+pedCoords = {};
+barCoords = {};
 
 % Load data
 [allData, scenario, sensors] = scene1();
@@ -144,6 +143,20 @@ for n=1:numel(allData)
     end
 end
 
+% Defining barriers
+barObj = radarObj;
+barMask = zeros(size(barObj));
+
+for i = 1:length(radarObj)
+    for ii = 1:length(cameraObj)
+        distance = pdist([radarObj(i,1:2); cameraObj(ii,1:2)]);
+        if distance < objDist
+            barMask(i, :) = [1, 1, 1, 1];
+            break
+        end
+    end
+end
+barObj(logical(barMask(:,1)),:) = [];
 
 % Plot detections
 subplot(2, 3, 2)
@@ -155,20 +168,21 @@ plot(cycObj(:,1), cycObj(:,2), 'og', 'DisplayName', 'Bicycle Detections')
 plot(pedObj(:,1), pedObj(:,2), 'ob', 'DisplayName', 'Pedestrian Detections')
 
 % Order matrixes
-sortcarObj = sortrows(carObj(:, [1, 2]));
-sortcycObj = sortrows(cycObj(:, [1, 2]));
-sortpedObj = sortrows(pedObj(:, [1, 2]));
+sortcarObj = carObj(:, [1, 2]);
+sortcycObj = cycObj(:, [1, 2]);
+sortpedObj = pedObj(:, [1, 2]);
+sortbarObj = barObj(:, [1, 2]);
 
 
 % Calculating the number of objects
 
-
+% For every car detections, detect if there are points on its vicinity
 for i = 1:length(sortcarObj(:,1))
     curr = sortcarObj(i,:);
     dist = sqrt((sortcarObj(i+1:end,1) - curr(1)).^2 + (sortcarObj(i+1:end,2) - curr(2)).^2);
     mask = dist < objDist;
     num = sum(mask);
-    str = strcat('Found ' int2str(num), ' cars nearby.');
+    str = strcat('Found ', int2str(num), ' cars nearby.');
     disp(str)
     if num > 0
         if ~count
@@ -176,6 +190,7 @@ for i = 1:length(sortcarObj(:,1))
             count = true;
             carCoords{end + 1} = [];
         end
+        % Sort the closest point to be the next one chosen
         carCoords{end}(end+1, :) = curr;
         idxs = find(mask) + i;
         minIdx = find(dist == min(dist)) + i;
@@ -183,6 +198,8 @@ for i = 1:length(sortcarObj(:,1))
        
         idxs = idxs(~(idxs==minIdx));
        
+        % If more then one point is detected, record its coordinates to
+        % work on the next iteration
         for ii = 1:length(idxs)
             un = sortcarObj(idxs(ii),:);
             if isempty(unused)
@@ -200,6 +217,7 @@ for i = 1:length(sortcarObj(:,1))
             [~,index] = ismember(unused, v ,'rows');
             unused = unused(~index, :);
         end
+    % Working on the previously detected points
     elseif ~isempty(unused)
         [idx, ~] = find(sortcarObj==unused(1,:));
         unused = unused(2:end, :);
@@ -236,113 +254,289 @@ for i = 1:length(sortcarObj(:,1))
                 [~,index] = ismember(unused, v,'rows');
                 unused = unused(~index, :);
             end
+        elseif isempty(unused)
+            disp('End of Object')
+            count = false;
         end
     else
-        disp('End of Object')
+        disp('Solo Object')
         count = false;
     end
+    % Eliminating already calculated points
      sortcarObj(i,:) = NaN;
 end
 
-pause()
-
-% for i = 1:length(sortcarObj(:,1))
-%     curr = sortcarObj(i,:);
-%     if ~isnan(curr(1))
-%         carNum = carNum +1;
-%         dist = sqrt((sortcarObj(:,1) - curr(1)).^2 + (sortcarObj(:,2) - curr(2)).^2);
-%         mask = dist < objDist;
-%         sortcarObj(mask,:) = NaN;
-% 
-%     end
-% end
-            
-% 
-% for i = 1:length(carObj(:,1))
-%     posDet(1, :) = carObj(i,:);
-%     for ii = i+1:length(carObj(:,1))
-%         posDet(2, :) = carObj(ii,:);
-%         distance = pdist(posDet, 'euclidean');
-%         if distance < carDist
-%             if ~count
-%                 carNum = carNum + 1;
-%                 count = true;
-%             end
-%             break
-%         elseif ii == length(carObj(2:end,1))
-%             count = false;
-%         end
-%     end
-% end
-% 
-% for i = 1:length(cycObj(:,1))
-%     posDet(1, :) = cycObj(i,:);
-%     for ii = i+1:length(cycObj(:,1))
-%         posDet(2, :) = cycObj(ii,:);
-%         distance = pdist(posDet, 'euclidean');
-%         if distance < cycDist
-%             if ~count
-%                 cycNum = cycNum + 1;
-%                 count = true;
-%             end
-%             break
-%         elseif ii == length(cycObj(2:end,1))
-%             count = false;
-%         end
-%     end
-% end
-% 
-% for i = 1:length(pedObj(:,1))
-%     posDet(1, :) = pedObj(i,:);
-%     for ii = i+1:length(pedObj(:,1))
-%         posDet(2, :) = pedObj(ii,:);
-%         distance = pdist(posDet, 'euclidean');
-%         if distance < pedDist
-%             if ~count
-%                 pedNum = pedNum + 1;
-%                 count = true;
-%             end
-%             break
-%         elseif ii == length(pedObj(2:end,1))
-%             count = false;
-%         end
-%     end
-% end
-% 
-% 
-% Defining barriers
-barObj = radarObj;
-barMask = zeros(size(barObj));
-
-for i = 1:length(radarObj)
-    for ii = 1:length(cameraObj)
-        distance = pdist([radarObj(i,1:2); cameraObj(ii,1:2)]);
-        if distance < radDist
-            barMask(i, :) = [1, 1, 1, 1];
-            break
+% For every cyc detections, detect if there are points on its vicinity
+for i = 1:length(sortcycObj(:,1))
+    curr = sortcycObj(i,:);
+    dist = sqrt((sortcycObj(i+1:end,1) - curr(1)).^2 + (sortcycObj(i+1:end,2) - curr(2)).^2);
+    mask = dist < objDist;
+    num = sum(mask);
+    str = strcat('Found ', int2str(num), ' cycs nearby.');
+    disp(str)
+    if num > 0
+        if ~count
+            cycNum = cycNum + 1;
+            count = true;
+            cycCoords{end + 1} = [];
         end
-    end
-end
-
-barObj(logical(barMask(:,1)),:) = [];
-barMask = zeros(size(barObj));
-for i = 1:length(barObj(:,1))
-    posDet(1, :) = barObj(i,:);
-    for ii = i+1:length(barObj(:,1))
-        posDet(2, :) = barObj(ii,:);
-        distance = pdist(posDet, 'euclidean');
-        if distance < barDist
-            if ~count
-                cycNum = cycNum + 1;
-                count = true;
+        % Sort the closest point to be the next one chosen
+        cycCoords{end}(end+1, :) = curr;
+        idxs = find(mask) + i;
+        minIdx = find(dist == min(dist)) + i;
+        v = sortcycObj(minIdx, :);
+       
+        idxs = idxs(~(idxs==minIdx));
+       
+        % If more then one point is detected, record its coordinates to
+        % work on the next iteration
+        for ii = 1:length(idxs)
+            un = sortcycObj(idxs(ii),:);
+            if isempty(unused)
+                unused(end+1, :) = un;
+            else
+                [~,index] = ismember(unused,un,'rows');
+                if sum(index) == 0
+                    unused(end+1, :) = un;
+                end
             end
-            break
-        elseif ii == length(cycObj(2:end,1))
+        end
+        sortcycObj(minIdx, :) = sortcycObj(i+1, :);
+        sortcycObj(i+1, :) = v;
+        if ~isempty(unused)
+            [~,index] = ismember(unused, v ,'rows');
+            unused = unused(~index, :);
+        end
+    % Working on the previously detected points
+    elseif ~isempty(unused)
+        [idx, ~] = find(sortcycObj==unused(1,:));
+        unused = unused(2:end, :);
+        curr = sortcycObj(idx(1), :);
+        sortcycObj(idx(1), :) = sortcycObj(i, :);
+        sortcycObj(i, :) = curr;
+        dist = sqrt((sortcycObj(i+1:end,1) - curr(1)).^2 + (sortcycObj(i+1:end,2) - curr(2)).^2);
+        mask = dist < objDist;
+        num = sum(mask);
+        str = strcat('Found ', int2str(num), ' cycs nearby, after backtracking.');
+        disp(str)
+        if num > 0
+            cycCoords{end}(end+1, :) = curr;
+            idxs = find(mask) + i;
+            minIdx = find(dist == min(dist)) + i;
+            v = sortcycObj(minIdx, :);
+           
+            idxs = idxs(~(idxs==minIdx));
+           
+            for ii = 1:length(idxs)
+                un = sortcycObj(idxs(ii),:);
+                if isempty(unused)
+                    unused(end+1, :) = un;
+                else
+                    [~,index] = ismember(unused,un,'rows');
+                    if sum(index) == 0
+                        unused(end+1, :) = un;
+                    end
+                end
+            end
+            sortcycObj(minIdx, :) = sortcycObj(i+1, :);
+            sortcycObj(i+1, :) = v;
+            if ~isempty(unused)
+                [~,index] = ismember(unused, v,'rows');
+                unused = unused(~index, :);
+            end
+        elseif isempty(unused)
+            disp('End of Object')
             count = false;
         end
+    else
+        disp('Solo Object')
+        count = false;
     end
+    % Eliminating already calculated points
+     sortcycObj(i,:) = NaN;
 end
 
+% For every pedestrian detections, detect if there are points on its vicinity
+for i = 1:length(sortpedObj(:,1))
+    curr = sortpedObj(i,:);
+    dist = sqrt((sortpedObj(i+1:end,1) - curr(1)).^2 + (sortpedObj(i+1:end,2) - curr(2)).^2);
+    mask = dist < objDist;
+    num = sum(mask);
+    str = strcat('Found ', int2str(num), ' peds nearby.');
+    disp(str)
+    if num > 0
+        if ~count
+            pedNum = pedNum + 1;
+            count = true;
+            pedCoords{end + 1} = [];
+        end
+        % Sort the closest point to be the next one chosen
+        pedCoords{end}(end+1, :) = curr;
+        idxs = find(mask) + i;
+        minIdx = find(dist == min(dist)) + i;
+        v = sortpedObj(minIdx, :);
+       
+        idxs = idxs(~(idxs==minIdx));
+       
+        % If more then one point is detected, record its coordinates to
+        % work on the next iteration
+        for ii = 1:length(idxs)
+            un = sortpedObj(idxs(ii),:);
+            if isempty(unused)
+                unused(end+1, :) = un;
+            else
+                [~,index] = ismember(unused,un,'rows');
+                if sum(index) == 0
+                    unused(end+1, :) = un;
+                end
+            end
+        end
+        sortpedObj(minIdx, :) = sortpedObj(i+1, :);
+        sortpedObj(i+1, :) = v;
+        if ~isempty(unused)
+            [~,index] = ismember(unused, v ,'rows');
+            unused = unused(~index, :);
+        end
+    % Working on the previously detected points
+    elseif ~isempty(unused)
+        [idx, ~] = find(sortpedObj==unused(1,:));
+        unused = unused(2:end, :);
+        curr = sortpedObj(idx(1), :);
+        sortpedObj(idx(1), :) = sortpedObj(i, :);
+        sortpedObj(i, :) = curr;
+        dist = sqrt((sortpedObj(i+1:end,1) - curr(1)).^2 + (sortpedObj(i+1:end,2) - curr(2)).^2);
+        mask = dist < objDist;
+        num = sum(mask);
+        str = strcat('Found ', int2str(num), ' peds nearby, after backtracking.');
+        disp(str)
+        if num > 0
+            pedCoords{end}(end+1, :) = curr;
+            idxs = find(mask) + i;
+            minIdx = find(dist == min(dist)) + i;
+            v = sortpedObj(minIdx, :);
+           
+            idxs = idxs(~(idxs==minIdx));
+           
+            for ii = 1:length(idxs)
+                un = sortcarObj(idxs(ii),:);
+                if isempty(unused)
+                    unused(end+1, :) = un;
+                else
+                    [~,index] = ismember(unused,un,'rows');
+                    if sum(index) == 0
+                        unused(end+1, :) = un;
+                    end
+                end
+            end
+            sortpedObj(minIdx, :) = sortpedObj(i+1, :);
+            sortpedObj(i+1, :) = v;
+            if ~isempty(unused)
+                [~,index] = ismember(unused, v,'rows');
+                unused = unused(~index, :);
+            end
+        elseif isempty(unused)
+            disp('End of Object')
+            count = false;
+        end
+    else
+        disp('Solo Object')
+        count = false;
+    end
+    % Eliminating already calculated points
+     sortpedObj(i,:) = NaN;
+end
 
-plot(barObj(:,1), barObj(:,2), 'oy', 'DisplayName', 'Barrier Detections')
+% For every bar detections, detect if there are points on its vicinity
+for i = 1:length(sortbarObj(:,1))
+    curr = sortbarObj(i,:);
+    dist = sqrt((sortbarObj(i+1:end,1) - curr(1)).^2 + (sortbarObj(i+1:end,2) - curr(2)).^2);
+    mask = dist < objDist;
+    num = sum(mask);
+    str = strcat('Found ', int2str(num), ' bars nearby.');
+    disp(str)
+    if num > 0
+        if ~count
+            barNum = barNum + 1;
+            count = true;
+            barCoords{end + 1} = [];
+        end
+        % Sort the closest point to be the next one chosen
+        barCoords{end}(end+1, :) = curr;
+        idxs = find(mask) + i;
+        minIdx = find(dist == min(dist)) + i;
+        v = sortbarObj(minIdx, :);
+       
+        idxs = idxs(~(idxs==minIdx));
+       
+        % If more then one point is detected, record its coordinates to
+        % work on the next iteration
+        for ii = 1:length(idxs)
+            un = sortbarObj(idxs(ii),:);
+            if isempty(unused)
+                unused(end+1, :) = un;
+            else
+                [~,index] = ismember(unused,un,'rows');
+                if sum(index) == 0
+                    unused(end+1, :) = un;
+                end
+            end
+        end
+        sortbarObj(minIdx, :) = sortbarObj(i+1, :);
+        sortbarObj(i+1, :) = v;
+        if ~isempty(unused)
+            [~,index] = ismember(unused, v ,'rows');
+            unused = unused(~index, :);
+        end
+    % Working on the previously detected points
+    elseif ~isempty(unused)
+        [idx, ~] = find(sortbarObj==unused(1,:));
+        unused = unused(2:end, :);
+        curr = sortbarObj(idx(1), :);
+        sortbarObj(idx(1), :) = sortbarObj(i, :);
+        sortbarObj(i, :) = curr;
+        dist = sqrt((sortbarObj(i+1:end,1) - curr(1)).^2 + (sortbarObj(i+1:end,2) - curr(2)).^2);
+        mask = dist < objDist;
+        num = sum(mask);
+        str = strcat('Found ', int2str(num), ' bars nearby, after backtracking.');
+        disp(str)
+        if num > 0
+            barCoords{end}(end+1, :) = curr;
+            idxs = find(mask) + i;
+            minIdx = find(dist == min(dist)) + i;
+            v = sortbarObj(minIdx, :);
+           
+            idxs = idxs(~(idxs==minIdx));
+           
+            for ii = 1:length(idxs)
+                un = sortbarObj(idxs(ii),:);
+                if isempty(unused)
+                    unused(end+1, :) = un;
+                else
+                    [~,index] = ismember(unused,un,'rows');
+                    if sum(index) == 0
+                        unused(end+1, :) = un;
+                    end
+                end
+            end
+            sortbarObj(minIdx, :) = sortbarObj(i+1, :);
+            sortbarObj(i+1, :) = v;
+            if ~isempty(unused)
+                [~,index] = ismember(unused, v,'rows');
+                unused = unused(~index, :);
+            end
+        elseif isempty(unused)
+            disp('End of Object')
+            count = false;
+        end  
+    else
+        disp('Solo Object')
+        count = false;
+    end
+    % Eliminating already calculated points
+     sortbarObj(i,:) = NaN;
+end
+
+% Plotting barriers
+barPlot = vertcat(barCoords{:});
+plot(barPlot(:,1), barPlot(:,2), 'oy', 'DisplayName', 'Barrier Detections')
 
