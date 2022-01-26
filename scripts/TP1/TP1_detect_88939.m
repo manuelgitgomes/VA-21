@@ -6,7 +6,9 @@ addpath('TP1/')
 clear, clc, close all
 
 % Load data
-[allData, scenario, sensors] = TP1_DSD_88939();
+% [allData, scenario, sensors] = allData_88939_1();
+data = load('allData_88939.mat');
+allData = data.allData;
 
 % Starting variables
 radarObj = [];
@@ -57,7 +59,11 @@ maxdistLastIdx = 0;
 laneX = zeros(1, length(allData));
 laneL = [];
 laneR = [];
-
+car_detected = false;
+truck_detected = false;
+bicycle_detected = false;
+pedestrian_detected = false;
+barrier_detected = false;
 
 % Erasing Actor Pose
 for n=1:numel(allData)
@@ -67,7 +73,7 @@ end
 % Defining time
 t = [allData.Time];
 
-% Plotting ego position with Actor Poses
+% %plotting ego position with Actor Poses
 PP = cell2mat(arrayfun(@(S) S.ActorPoses(1).Position', allData, 'UniformOutput', false))';
 
 % Using Actor Poses
@@ -81,17 +87,17 @@ for i = 1:ceil(length(PP)/interval)-1
     IMSDist = IMSDist + pdist(imsDet);
 end
 
-% Creating plots
-subplot(2, 3, 1)
-plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
+% Creating %plots
+%subplot(2, 3, 1)
+%plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
 view(-90, 90)
 title('Vehicle Trajectory')
 axis square
 xlabel('X (m)')
 ylabel('Y (m)')
 
-subplot(2, 3, 2)
-plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
+%subplot(2, 3, 2)
+%plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
 hold on
 view(-90, 90)
 title('Detections with Radar')
@@ -100,8 +106,8 @@ xlabel('X (m)')
 ylabel('Y (m)')
 legend
 
-subplot(2, 3, 3)
-plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
+%subplot(2, 3, 3)
+%plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
 hold on
 view(-90, 90)
 title('Detections with Camera')
@@ -110,8 +116,8 @@ xlabel('X (m)')
 ylabel('Y (m)')
 legend
 
-subplot(2, 3, 4)
-plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
+%subplot(2, 3, 4)
+%plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
 hold on
 view(-90, 90)
 title('Object Detections')
@@ -120,8 +126,8 @@ xlabel('X (m)')
 ylabel('Y (m)')
 legend
 
-subplot(2, 3, 5)
-plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
+%subplot(2, 3, 5)
+%plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
 hold on
 view(-90, 90)
 title('Vehicles Centroids')
@@ -131,8 +137,8 @@ ylabel('Y (m)')
 legend
 
 
-subplot(2, 3, 6)
-plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
+%subplot(2, 3, 6)
+%plot(PP(:,1), PP(:,2), 'k', 'DisplayName', 'Vehicle Trajectory')
 hold on
 view(-90, 90)
 title('Distances')
@@ -195,25 +201,30 @@ for n=1:numel(allData)
                 cameraObj(end+1,:) = Pmundo;
                 if classObj == 1 
                     carObj(end+1,:) = Pmundo;
+                    car_detected = true;
                 elseif classObj == 2
                     truObj(end+1,:) = Pmundo;
+                    truck_detected = true;
                 elseif classObj == 3
                     cycObj(end+1,:) = Pmundo;
+                    bicycle_detected = true;
                 elseif classObj == 4
                     pedObj(end+1,:) = Pmundo;
+                    pedestrian_detected = true;
                 elseif classObj == 5 || classObj == 6
                     barObj(end+1,:) = Pmundo;
+                    barrier_detected = true;
                 end
         
             end
         end
     end
 end
-% Plot lanes
+% %plot lanes
 laneL = rmmissing(laneL);
 laneR = rmmissing(laneR);
-plot(laneL(:,1), laneL(:,2), 'r', 'DisplayName', 'Left Lane')
-plot(laneR(:,1), laneR(:,2), 'g', 'DisplayName', 'Right Lane')
+%plot(laneL(:,1), laneL(:,2), 'r', 'DisplayName', 'Left Lane')
+%plot(laneR(:,1), laneR(:,2), 'g', 'DisplayName', 'Right Lane')
 
 % Defining barriers
 barObj = radarObj;
@@ -224,36 +235,25 @@ for i = 1:length(radarObj)
         distance = pdist([radarObj(i,1:2); cameraObj(ii,1:2)]);
         if distance < objDist
             barMask(i, :) = [1, 1, 1, 1];
+            barrier_detected = true;
             break
         end
     end
 end
 barObj(logical(barMask(:,1)),:) = [];
 
-% Plot detections
-subplot(2, 3, 2)
-plot(radarObj(:,1), radarObj(:,2), 'or', 'DisplayName', 'Radar Detections')
+% %plot detections and order matrixes
+%subplot(2, 3, 2)
+%plot(radarObj(:,1), radarObj(:,2), 'or', 'DisplayName', 'Radar Detections')
 
-subplot(2, 3, 3)
-plot(cameraObj(:,1), cameraObj(:,2), 'or', 'DisplayName', 'Camera Detections')
+%subplot(2, 3, 3)
+%plot(cameraObj(:,1), cameraObj(:,2), 'or', 'DisplayName', 'Camera Detections')
 
-subplot(2, 3, 4)
-plot(carObj(:,1), carObj(:,2), 'or', 'DisplayName', 'Car Detections')
-plot(truObj(:,1), truObj(:,2), 'om', 'DisplayName', 'Truck Detections')
-plot(cycObj(:,1), cycObj(:,2), 'og', 'DisplayName', 'Bicycle Detections')
-plot(pedObj(:,1), pedObj(:,2), 'ob', 'DisplayName', 'Pedestrian Detections')
-
-% Order matrixes
-sortcarObj = carObj(:, [1, 2]);
-sorttruObj = truObj(:, [1, 2]);
-sortcycObj = cycObj(:, [1, 2]);
-sortpedObj = pedObj(:, [1, 2]);
-sortbarObj = barObj(:, [1, 2]);
-
-
-% Calculating the number of objects
-
-% For every car detections, detect if there are points on its vicinity
+%subplot(2, 3, 4)
+if car_detected
+    %plot(carObj(:,1), carObj(:,2), 'or', 'DisplayName', 'Car Detections')
+    sortcarObj = carObj(:, [1, 2]);
+    % For every car detections, detect if there are points on its vicinity
 for i = 1:length(sortcarObj(:,1))
     curr = sortcarObj(i,:);
     dist = sqrt((sortcarObj(i+1:end,1) - curr(1)).^2 + (sortcarObj(i+1:end,2) - curr(2)).^2);
@@ -345,9 +345,14 @@ for i = 1:length(sortcarObj(:,1))
     end
     % Eliminating already calculated points
      sortcarObj(i,:) = NaN;
+     
+end
 end
 
-% For every car detections, detect if there are points on its vicinity
+if truck_detected
+    %plot(truObj(:,1), truObj(:,2), 'om', 'DisplayName', 'Truck Detections')
+    sorttruObj = truObj(:, [1, 2]);
+    % For every car detections, detect if there are points on its vicinity
 for i = 1:length(sorttruObj(:,1))
     curr = sorttruObj(i,:);
     dist = sqrt((sorttruObj(i+1:end,1) - curr(1)).^2 + (sorttruObj(i+1:end,2) - curr(2)).^2);
@@ -441,6 +446,12 @@ for i = 1:length(sorttruObj(:,1))
      sorttruObj(i,:) = NaN;
 end
 
+    
+end
+
+if bicycle_detected
+    %plot(cycObj(:,1), cycObj(:,2), 'og', 'DisplayName', 'Bicycle Detections')
+    sortcycObj = cycObj(:, [1, 2]);
 % For every cyc detections, detect if there are points on its vicinity
 for i = 1:length(sortcycObj(:,1))
     curr = sortcycObj(i,:);
@@ -534,7 +545,11 @@ for i = 1:length(sortcycObj(:,1))
     % Eliminating already calculated points
      sortcycObj(i,:) = NaN;
 end
+end
 
+if pedestrian_detected
+    %plot(pedObj(:,1), pedObj(:,2), 'ob', 'DisplayName', 'Pedestrian Detections')
+    sortpedObj = pedObj(:, [1, 2]);
 % For every pedestrian detections, detect if there are points on its vicinity
 for i = 1:length(sortpedObj(:,1))
     curr = sortpedObj(i,:);
@@ -629,7 +644,11 @@ for i = 1:length(sortpedObj(:,1))
      sortpedObj(i,:) = NaN;
 end
 
-% For every bar detections, detect if there are points on its vicinity
+end
+
+if barrier_detected
+    sortbarObj = barObj(:, [1, 2]);
+    % For every bar detections, detect if there are points on its vicinity
 for i = 1:length(sortbarObj(:,1))
     curr = sortbarObj(i,:);
     dist = sqrt((sortbarObj(i+1:end,1) - curr(1)).^2 + (sortbarObj(i+1:end,2) - curr(2)).^2);
@@ -723,105 +742,121 @@ for i = 1:length(sortbarObj(:,1))
      sortbarObj(i,:) = NaN;
 end
 
-% Plotting barriers
-barPlot = vertcat(barCoords{:});
-plot(barPlot(:,1), barPlot(:,2), 'oy', 'DisplayName', 'Barrier Detections')
+% %plotting barriers
+barplot = vertcat(barCoords{:});
+%plot(bar%plot(:,1), bar%plot(:,2), 'oy', 'DisplayName', 'Barrier Detections')
+
+end
+
+
 
 % Calculating centroids, and checking for moving vehicles 
 % by seeing distance between detection points and its centroid
-subplot(2, 3, 5)
+%subplot(2, 3, 5)
 
-for i = 1:length(carCoords)
-    carCent(end+1,:) = mean(carCoords{i});
-    dist = sqrt((carCoords{i}(:,1) - carCent(end,1)).^2 + (carCoords{i}(:,2) - carCent(end,2)).^2);
-    mask = dist > carMov;
-    if sum(mask) > 0
-        carmovNum = carmovNum + 1;
-        plot(carCent(end, 1), carCent(end, 2), 'og', 'DisplayName', 'Moving Car')
-    else
-        carStopCoords{end+1} = carCoords{i};
-        carStopCent(end+1,:) = carCent(end,:);
-        plot(carCent(end, 1), carCent(end, 2), 'or', 'DisplayName', 'Stopped Car')
+if car_detected
+    for i = 1:length(carCoords)
+        carCent(end+1,:) = mean(carCoords{i});
+        dist = sqrt((carCoords{i}(:,1) - carCent(end,1)).^2 + (carCoords{i}(:,2) - carCent(end,2)).^2);
+        mask = dist > carMov;
+        if sum(mask) > 0
+            carmovNum = carmovNum + 1;
+            %plot(carCent(end, 1), carCent(end, 2), 'og', 'DisplayName', 'Moving Car')
+        else
+            carStopCoords{end+1} = carCoords{i};
+            carStopCent(end+1,:) = carCent(end,:);
+            %plot(carCent(end, 1), carCent(end, 2), 'or', 'DisplayName', 'Stopped Car')
+        end
+        
     end
-    
 end
 
-for i = 1:length(truCoords)
+if truck_detected
+    for i = 1:length(truCoords)
     truCent(end+1,:) = mean(truCoords{i});
     dist = sqrt((truCoords{i}(:,1) - truCent(end,1)).^2 + (truCoords{i}(:,2) - truCent(end,2)).^2);
     mask = dist > truMov;
     if sum(mask) > 0
         trumovNum = trumovNum + 1;
-        plot(truCent(end, 1), truCent(end, 2), 'oy', 'DisplayName', 'Moving Truck')
+        %plot(truCent(end, 1), truCent(end, 2), 'oy', 'DisplayName', 'Moving Truck')
     else
         truStopCoords{end+1} = truCoords{i};
         truStopCent(end+1,:) = truCent(end,:);
-        plot(truCent(end, 1), truCent(end, 2), 'ob', 'DisplayName', 'Stopped Truck')
+        %plot(truCent(end, 1), truCent(end, 2), 'ob', 'DisplayName', 'Stopped Truck')
+    end
     end
 end
 
 % Calculating distances
-subplot(2,3,6)
+%subplot(2,3,6)
 
 % Finding the index of the point closest to the first car
-for i = 1:length(carStopCoords)   
-    dist = sqrt((PP(:,1) - carStopCent(i,1)).^2 + (PP(:,2) - carStopCent(i,2)).^2);
-    minDist = min(dist);
-    minIdx = find(dist == minDist);
-    if minIdx < mindistIdx
-        mindistIdx = minIdx;
-    end
-end
-
-
-for i = 1:length(truStopCoords)   
-    dist = sqrt((PP(:,1) - truStopCent(i,1)).^2 + (PP(:,2) - truStopCent(i,2)).^2);
-    minDist = min(dist);
-    minIdx = find(dist == minDist);
-    if minIdx < mindistIdx
-        mindistIdx = minIdx;
-    end
-end
-
-
-% After finding the index, calculating distance
-for i = 1:length(PP(1:mindistIdx, 1))-1
-    distDet(1, :) = PP(i);
-    distDet(2, :) = PP(i+1);
-    mindistCar =  mindistCar + pdist(distDet);
-end
-
-plot(PP(mindistIdx, 1), PP(mindistIdx, 2), 'or', 'DisplayName', 'LStopCar1')
-
-% Finding the index of the point closest to the first and last barrier
-barVect = vertcat(barCoords{:});
-for i = 1:length(barVect)   
-        dist = sqrt((PP(:,1) - barVect(i,1)).^2 + (PP(:,2) - barVect(i,2)).^2);
+if car_detected
+    for i = 1:length(carStopCoords)   
+        dist = sqrt((PP(:,1) - carStopCent(i,1)).^2 + (PP(:,2) - carStopCent(i,2)).^2);
         minDist = min(dist);
         minIdx = find(dist == minDist);
-        if minIdx < mindistFirstIdx
-            mindistFirstIdx = minIdx;
+        if minIdx < mindistIdx
+            mindistIdx = minIdx;
         end
-        if minIdx > maxdistLastIdx
-            maxdistLastIdx = minIdx;
-        end
+    end
 end
+
+
+if truck_detected
+    for i = 1:length(truStopCoords)   
+        dist = sqrt((PP(:,1) - truStopCent(i,1)).^2 + (PP(:,2) - truStopCent(i,2)).^2);
+        minDist = min(dist);
+        minIdx = find(dist == minDist);
+        if minIdx < mindistIdx
+            mindistIdx = minIdx;
+        end
+    end
+end
+
 
 % After finding the index, calculating distance
-for i = 1:length(PP(1:mindistFirstIdx, 1))-1
-    distDet(1, :) = PP(i);
-    distDet(2, :) = PP(i+1);
-    mindistFirstBar =  mindistFirstBar + pdist(distDet);
+if car_detected
+    for i = 1:length(PP(1:mindistIdx, 1))-1
+        distDet(1, :) = PP(i);
+        distDet(2, :) = PP(i+1);
+        mindistCar =  mindistCar + pdist(distDet);
+    end
+    
+    %plot(PP(mindistIdx, 1), PP(mindistIdx, 2), 'or', 'DisplayName', 'LStopCar1')
 end
 
-for i = 1:length(PP(1:maxdistLastIdx, 1))-1
-    distDet(1, :) = PP(i);
-    distDet(2, :) = PP(i+1);
-    maxdistLastBar =  maxdistLastBar + pdist(distDet);
+% Finding the index of the point closest to the first and last barrier
+if barrier_detected
+    barVect = vertcat(barCoords{:});
+    for i = 1:length(barVect)   
+            dist = sqrt((PP(:,1) - barVect(i,1)).^2 + (PP(:,2) - barVect(i,2)).^2);
+            minDist = min(dist);
+            minIdx = find(dist == minDist);
+            if minIdx < mindistFirstIdx
+                mindistFirstIdx = minIdx;
+            end
+            if minIdx > maxdistLastIdx
+                maxdistLastIdx = minIdx;
+            end
+    end
+    
+    % After finding the index, calculating distance
+    for i = 1:length(PP(1:mindistFirstIdx, 1))-1
+        distDet(1, :) = PP(i);
+        distDet(2, :) = PP(i+1);
+        mindistFirstBar =  mindistFirstBar + pdist(distDet);
+    end
+    
+    for i = 1:length(PP(1:maxdistLastIdx, 1))-1
+        distDet(1, :) = PP(i);
+        distDet(2, :) = PP(i+1);
+        maxdistLastBar =  maxdistLastBar + pdist(distDet);
+    end
+    
+    %plot(PP(mindistFirstIdx, 1), PP(mindistFirstIdx, 2), 'og', 'DisplayName', 'LBarrFirst')
+    %plot(PP(maxdistLastIdx, 1), PP(maxdistLastIdx, 2), 'ob', 'DisplayName', 'LBarrLast')
 end
-
-plot(PP(mindistFirstIdx, 1), PP(mindistFirstIdx, 2), 'og', 'DisplayName', 'LBarrFirst')
-plot(PP(maxdistLastIdx, 1), PP(maxdistLastIdx, 2), 'ob', 'DisplayName', 'LBarrLast')
 
 % Calculating final variables
 clc
