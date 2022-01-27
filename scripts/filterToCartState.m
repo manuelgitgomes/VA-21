@@ -11,8 +11,7 @@ function cartState = filterToCartState(filterState)
     dd2ds2 = zeros(1,numStates);
     frenetState = [s;ds;dds;d;ddbyds;dd2ds2];
     % Convert to global state
-    waypoints = [0 50; 150 50; 300 75; 310 75; 400 0; 300 -50; 290 -50; 0 -50];
-    refPath = referencePathFrenet(waypoints);
+    refPath = helperGetReferencePath();
     globalState = frenet2global(refPath,frenetState')';
     % Convert to cartesian state
     x = globalState(1,:);

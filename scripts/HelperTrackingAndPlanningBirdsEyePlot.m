@@ -116,9 +116,13 @@ classdef HelperTrackingAndPlanningBirdsEyePlot < matlab.System
 
             posRadar = pos(ismember(detectionSensorIndex,radarSensorIndex),:);
             posCamera = pos(ismember(detectionSensorIndex,cameraSensorIndex),:);
-
-            plotDetection(obj.RadarDetectionPlotter,posRadar);
-            plotDetection(obj.VisionDetectionPlotter,posCamera);
+            
+            if exist('obj.RadarDetectionPlotter','var')
+                plotDetection(obj.RadarDetectionPlotter,posRadar);
+            end
+            if exist('obj.VisionDetectionPlotter', 'var')
+                plotDetection(obj.VisionDetectionPlotter,posCamera);
+            end
 
             [~,poses] = obstaclePose(capList);
             posesXY = zeros(0,2);

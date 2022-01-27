@@ -113,13 +113,13 @@ function laneNum = exampleHelperPredictLane(frenetState, laneWidth, dt)
 
 narginchk(3,3);
 
-laneBounds = [inf (2:-1:-2)*laneWidth -inf];
+laneBounds = [inf (1:-1:-1)*laneWidth -inf];
 laneNum = zeros(numel(dt),1);
 
 for i = 1:numel(dt)
     if dt(i) == 0
         dLaneEgo = laneBounds-frenetState(4);
-        laneNum(i) = min(find(dLaneEgo(2:(end-1)) >= 0 & dLaneEgo(3:(end)) < 0,1),4);
+        laneNum(i) = find(dLaneEgo(2:(end-1)) >= 0 & dLaneEgo(3:(end)) < 0,1);
     else
         % Retrieve current velocity/acceleration/time
         t  = dt(i);
@@ -153,7 +153,7 @@ for i = 1:numel(dt)
         dLaneEgo = laneBounds-(frenetState(4)+Ldiff);
         
         % Determine future lane
-        idx = min(find(dLaneEgo(2:(end-1)) >= 0 & dLaneEgo(3:(end)) < 0,1),4);
+        idx = find(dLaneEgo(2:(end-1)) >= 0 & dLaneEgo(3:(end)) < 0,1);
         if ~isempty(idx)
             laneNum(i) = idx;
         else
@@ -194,8 +194,12 @@ timeCost = times*timeWeight;
 % Calculate terminal speed vs desired speed cost
 speedCost = abs(terminalStates(:,2)-speedLimit)*speedWeight;
 
+% Calculate if on right lane
+leftDeviation = abs(laneCenters(3)-terminalStates(:,4));
+leftCost = min(leftDeviation,[],2)*latWeight;
+
 % Return cumulative cost
-costs = latCost+timeCost+speedCost;
+costs = latCost+timeCost+speedCost+leftCost;
 end
 
 function isValid = exampleHelperEvaluateTrajectory(globalTrajectory, maxAcceleration, maxCurvature, minVelocity)
@@ -336,7 +340,7 @@ frenetState = global2frenet(refPath, egoState);
 futureLane = exampleHelperPredictLane(frenetState, laneWidth, dt);
 
 % Convert future lanes to lateral offsets
-lateralOffsets = (2-futureLane+.5)*laneWidth;
+lateralOffsets = (1-futureLane+.5)*laneWidth;
 
 % Return terminal states
 terminalStates      = zeros(numel(dt),6);
@@ -384,7 +388,7 @@ else
     validLanes = adjacentLanes > 0 & adjacentLanes <= 4;
 
     % Calculate lateral deviation for adjacent lanes
-    lateralOffset = (2-adjacentLanes(validLanes)+.5)*laneWidth;
+    lateralOffset = (1-adjacentLanes(validLanes)+.5)*laneWidth;
     numLane = nnz(validLanes);
 
     % Calculate terminal states

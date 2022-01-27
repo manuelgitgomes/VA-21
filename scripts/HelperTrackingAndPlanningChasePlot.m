@@ -108,8 +108,13 @@ classdef HelperTrackingAndPlanningChasePlot < matlab.System
             posRadar = pos(ismember(detectionSensorIndex,radarSensorIndex),:);
             posCamera = pos(ismember(detectionSensorIndex,cameraSensorIndex),:);
 
-            plotDetection(obj.RadarDetectionPlotter,posRadar);
-            plotDetection(obj.VisionDetectionPlotter,posCamera);
+             if exist('obj.RadarDetectionPlotter','var')
+                plotDetection(obj.RadarDetectionPlotter,posRadar);
+            end
+            if exist('obj.VisionDetectionPlotter', 'var')
+                plotDetection(obj.VisionDetectionPlotter,posCamera);
+            end
+
             hold(obj.Parent,'on');
             show(capList,'Parent',obj.Parent,'FastUpdate',1,'TimeStep',1:capList.MaxNumSteps);
             hold(obj.Parent,'off');
