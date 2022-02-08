@@ -33,6 +33,7 @@ end
 [termStatesLC,timesLC] = exampleHelperBasicLaneChange(...
     refPath,laneWidth,egoState,timeHorizons);
 
+
 % Generate vehicle following states.
 if ~isempty(curActorState)
     [termStatesF,timesF] = exampleHelperBasicLeadVehicleFollow(...
@@ -89,6 +90,49 @@ for i = 1:numel(trajectoryList)
     trajectoryList(i).IsValid = isValid(i);
 end
 
+if numel(optimalTrajectory) == 0
+    % Generate stopage states.
+    [termStatesS,timesS] = exampleHelperBasicStopVehicleFollow(...
+        refPath,laneWidth,egoState,timeHorizons);
+    
+    stop_costTS = exampleHelperEvaluateTSCost(termStatesS,timesS,laneWidth,speedLimit,...
+        speedWeight, latDevWeight, timeWeight);
+    
+    stop_egoFrenetState = global2frenet(refPath,egoState);
+    [~,stop_globalTraj] = connect(connector,stop_egoFrenetState,termStatesS,timesS);
+    
+    % Eliminate trajectories that violate constraints.
+    isValid = exampleHelperEvaluateTrajectory(stop_globalTraj,maxAcceleration,maxCurvature,minVelocity);
+    
+    % Determine evaluation order.
+    [~, idx] = sort(stop_costTS);
+    optimalTrajectory = [];
+    
+    stop_trajectoryEvaluation = nan(numel(isValid),1);
+    
+    % Check each trajectory for collisions starting with least cost.
+    for i = 1:numel(idx)
+        if isValid(idx(i))
+            % Update capsule list with the ego object's candidate trajectory.
+            egoPoses.States = stop_globalTraj(idx(i)).Trajectory(1:collisionCheckResolution:end,1:3);
+            updateEgoPose(capList,1,egoPoses);
+    
+            % Check for collisions.
+            isColliding = checkCollision(capList);
+    
+            if all(~isColliding)
+                % If no collisions are found, this is the optimal.
+                % trajectory.
+                stop_trajectoryEvaluation(idx(i)) = 1;
+                optimalTrajectory = stop_globalTraj(idx(i)).Trajectory;
+                break;
+            else
+                stop_trajectoryEvaluation(idx(i)) = 0;
+            end
+        end
+    end
+end
+
 end
 
 function laneNum = exampleHelperPredictLane(frenetState, laneWidth, dt)
@@ -118,7 +162,8 @@ laneNum = zeros(numel(dt),1);
 
 for i = 1:numel(dt)
     if dt(i) == 0
-        dLaneEgo = laneBounds-frenetState(4);
+        dLaneEgo = laneBounds-frenetState(4)
+        find(dLaneEgo(2:(end-1)) >= 0 & dLaneEgo(3:(end)) < 0,1)
         laneNum(i) = find(dLaneEgo(2:(end-1)) >= 0 & dLaneEgo(3:(end)) < 0,1);
     else
         % Retrieve current velocity/acceleration/time
@@ -261,6 +306,8 @@ function [terminalStates, times] = exampleHelperBasicStopVehicleFollow(refPath, 
 % Copyright 2020 The MathWorks, Inc.
 
 % Convert ego state to Frenet coordinates
+% refPath
+% egoState
 frenetStateEgo = global2frenet(refPath, egoState);
 
 % Get current lane of ego vehicle

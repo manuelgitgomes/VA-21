@@ -1,12 +1,14 @@
-%% Exercise 1
+%% TP2
 clear, clc, close all
-% [~, scenario, sensors] = TP2_Cenario_1();
-[~, scenario, sensors] = TP2_Cenario_2();
+addpath("TP2/")
+% [~, scenario, ~] = TP2_Cenario_2();
+[~, scenario, ~] = DSD();
+
+[sensors, ~] = createSensors(scenario);
 egoVehicle = scenario.Actors(1);
+
 % Collision check time stamps
 tSteps = 0.5:0.5:5;
-
-
 
 scenario.SampleTime = 0.1;
 
@@ -30,10 +32,7 @@ updateEgoGeometry(capList,egoID,egoGeom);
 display = TrackingAndPlanningDisplay;
 
 % Initial state of the ego vehicle
-% waypoints = [-43.7 52.9; 13.7 40.1; 57.1 14.5; 42.3 -63; 115.9 -120.8; 214.2 -152.7];
-% refPath = referencePathFrenet(waypoints);
-
-refPath = helperGetReferencePath;
+refPath = helperGetReferencePath();
 egoState = frenet2global(refPath,[0 0 0 -0.5*laneWidth 0 0]);
 moveEgoToState(egoVehicle, egoState);
 
@@ -47,7 +46,10 @@ while advance(scenario)
     % Current time
     time = scenario.SimulationTime;
     % Obter as deteções
-    detections = helperGenerateDetections({sensors}, egoVehicle, time); %Pre-processamento 
+    detections = helperGenerateDetections(sensors, egoVehicle, time); %Pre-processamento 
+    if numel(detections) > 0
+        detections{1}
+    end
     % de medições para compatibilização e parametrização de erros
     tracks = tracker(detections, time);
 
@@ -63,7 +65,7 @@ while advance(scenario)
     [optimalTrajectory, trajectoryList] = helperPlanHighwayTrajectory(capList, ...
         currActorState, egoState); %Último exercicio da aula anterior
     % Visualize the results
-    display(scenario, egoVehicle, {sensors}, detections, tracks, capList, trajectoryList);
+    display(scenario, egoVehicle, sensors, detections, tracks, capList, trajectoryList);
     % Mover o veiculo para a posição atual
     egoState = optimalTrajectory(2,:);
     moveEgoToState(egoVehicle,egoState);

@@ -12,7 +12,7 @@ function detections = helperPreprocessDetections(detections)
     % 3. It inflates the measurement noise for range-rate reported by the
     % radars to match the range-rate resolution of the sensor
     for i = 1:numel(detections)
-        if detections{i}.SensorIndex == 1 % Camera
+        if detections{i}.SensorIndex <= 4 % Camera
             % Remove velocity
             detections{i}.Measurement = detections{i}.Measurement(1:3);
             detections{i}.MeasurementNoise = blkdiag(detections{i}.MeasurementNoise(1:2,1:2),25);
@@ -27,7 +27,7 @@ function detections = helperPreprocessDetections(detections)
                 detections{i}.MeasurementNoise(2,2) = 0.25;
             end
         else % Radars
-            detections{i}.MeasurementNoise(3,3) = 0.5^2/4;
+%             detections{i}.MeasurementNoise(3,3) = 0.5^2/4;
         end
     end
 end

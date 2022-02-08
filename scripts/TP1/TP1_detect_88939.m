@@ -7,7 +7,7 @@ clear, clc, close all
 
 % Load data
 % [allData, scenario, sensors] = allData_88939_1();
-data = load('allData_88939.mat');
+data = load(['allData_88939_2.mat']);
 allData = data.allData;
 
 % Starting variables
