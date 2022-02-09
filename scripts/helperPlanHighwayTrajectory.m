@@ -92,8 +92,10 @@ end
 
 if numel(optimalTrajectory) == 0
     % Generate stopage states.
-    [termStatesS,timesS] = exampleHelperBasicStopVehicleFollow(...
-        refPath,laneWidth,egoState,timeHorizons);
+    [termStatesS,timesS] = exampleHelperBasicStopControl(...
+    refPath,laneWidth,egoState, timeHorizons);
+%     [termStatesS,timesS] = exampleHelperBasicStopVehicleFollow(...
+%         refPath,laneWidth,egoState,timeHorizons);
     
     stop_costTS = exampleHelperEvaluateTSCost(termStatesS,timesS,laneWidth,speedLimit,...
         speedWeight, latDevWeight, timeWeight);
@@ -280,79 +282,48 @@ for i = 1:numel(globalTrajectory)
     isValid(i) = ~accViolated && ~curvViolated && ~velViolated;
 end
 end
-function [terminalStates, times] = exampleHelperBasicStopVehicleFollow(refPath, laneWidth, safetyGap, egoState, actorState, dt)
-%exampleHelperBasicLeadVehicleFollow Generates terminal states for vehicle following behavior.
+function [terminalStates, times] = exampleHelperBasicStopControl(refPath, laneWidth, egoState, dt)
+%exampleHelperBasicCruiseControl Generates terminal states for cruise control behavior.
 %
 %   This function is for internal use only. It may be removed in the future
 
-%   [TERMINALSTATES, TIMES] = exampleHelperBasicLeadVehicleFollow(REFPATH, LANEWIDTH, SAFETYGAP, EGOSTATE, ACTORSTATE, DT)
-%   Generates terminal states that attempt to follow behind the nearest
-%   vehicle in the ego vehicle's current lane over given spans of time, DT.
+%   [TERMINALSTATES, TIMES] = exampleHelperBasicCruiseControl(REFPATH, LANEWIDTH, EGOSTATE, TARGETVELOCITY, DT)
+%   Generates terminal states that attempt to obey the speed limit,
+%   TARGETVELOCITY, while following a lane center over a given spans of time, DT.
 %
-%   REFPATH is a referencePathFrenet object used to convert the ego and
-%   actors' state, EGOSTATE/ACTORSTATE, respectively, from global coordinates,
-%   [x y theta kappa v a], to Frenet coordinates, [S dS ddS L dL ddL].
+%   REFPATH is a referencePathFrenet object used to convert the ego
+%   vehicle's state, EGOSTATE, from global coordinates, [x y theta kappa v a],
+%   to Frenet coordinates, [S dS ddS L dL ddL].
 %
 %   Once in Frenet coordinates, exampleHelperPredictLane is used to predict
-%   the future lanes of all actors over the given times, DT. The nearest
-%   actor leading the ego vehicle in the same lane is chosen as the vehicle
-%   to follow.
+%   the future lane that the vehicle would reside in based on the current
+%   Frenet state and zero terminal velocity/acceleration over the given
+%   span of time.
 %
 %   The function returns TERMINALSTATES, an N-by-6 matrix where each row
-%   is a Frenet state defined as follows:
-%   [(S_lead-SAFETYGAP) dS_lead 0 L_lead dL_lead 0], where *_lead denotes
-%   the state of the nearest lead vehicle.
+%   is a Frenet state defined as follows: [NaN TARGETVELOCITY 0 L_lane 0 0], where
+%   L_lane is the lateral deviation of the predicted lane-center. TIMES is
+%   also returned as an N-by-1 vector of doubles.
 %
 % Copyright 2020 The MathWorks, Inc.
 
 % Convert ego state to Frenet coordinates
-% refPath
-% egoState
-frenetStateEgo = global2frenet(refPath, egoState);
+frenetState = global2frenet(refPath, egoState);
 
-% Get current lane of ego vehicle
-curEgoLane = exampleHelperPredictLane(frenetStateEgo, laneWidth, 0);
+% Determine current and future lanes
+futureLane = exampleHelperPredictLane(frenetState, laneWidth, dt);
 
-% Get current and predicted lanes for each actor
-frenetStateActors = global2frenet(refPath, actorState);
+% Convert future lanes to lateral offsets
+lateralOffsets = (1-futureLane+.5)*laneWidth;
 
-predictedActorLanes = zeros(numel(dt),size(actorState,1));
-for i = 1:size(actorState,1)
-    predictedActorLanes(:,i) = exampleHelperPredictLane(frenetStateActors(i,:),laneWidth,dt);
+% Return terminal states
+terminalStates      = zeros(numel(dt),6);
+terminalStates(:,1) = nan;
+terminalStates(:,2) = 0;
+terminalStates(:,4) = lateralOffsets;
+times = dt(:);
 end
-% For each time horizon, find the closest car in the same lane as
-% ego vehicle
-terminalStates = zeros(numel(dt),6);
-validTS = false(numel(dt),1);
-for i = 1:numel(dt)
-    % Find vehicles in same lane t seconds into the future
-    laneMatch = curEgoLane == predictedActorLanes(i,:)';
 
-    % Determine if they are ahead of the ego vehicle
-    leadVehicle = frenetStateEgo(1) < frenetStateActors(:,1);
-
-    % Of these, find the vehicle closest to the ego vehicle (assume
-    % constant longitudinal velocity)
-    future_S = frenetStateActors(:,1) + frenetStateActors(:,2)*dt(i);
-    future_S(~leadVehicle | ~laneMatch) = inf;
-    [actor_S1, idx] = min(future_S);
-
-    % Check if any car meets the conditions
-    if actor_S1 ~= inf
-        % If distance is greater than safety gap, set the terminal
-        % state behind this lead vehicle
-        if frenetStateEgo(1)+safetyGap < actor_S1
-            ego_S1 = actor_S1-safetyGap;
-            terminalStates(i,:) = [ego_S1 0 0 frenetStateActors(idx,4:5) 0];
-            validTS(i) = true;
-        end
-    end
-end
-% Remove any bad terminal states
-terminalStates(~validTS,:) = [];
-times = dt(validTS(:));
-times = times(:);
-end
 
 function [terminalStates, times] = exampleHelperBasicLeadVehicleFollow(refPath, laneWidth, safetyGap, egoState, actorState, dt)
 %exampleHelperBasicLeadVehicleFollow Generates terminal states for vehicle following behavior.

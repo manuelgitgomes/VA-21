@@ -1,8 +1,8 @@
 %% TP2
 clear, clc, close all
 addpath("TP2/")
-% [~, scenario, ~] = TP2_Cenario_2();
-[~, scenario, ~] = DSD();
+[~, scenario, ~] = TP2_Cenario_2();
+% [~, scenario, ~] = DSD();
 
 [sensors, ~] = createSensors(scenario);
 egoVehicle = scenario.Actors(1);
@@ -67,6 +67,6 @@ while advance(scenario)
     % Visualize the results
     display(scenario, egoVehicle, sensors, detections, tracks, capList, trajectoryList);
     % Mover o veiculo para a posição atual
-    egoState = optimalTrajectory(2,:);
+    egoState = optimalTrajectory(2,:)
     moveEgoToState(egoVehicle,egoState);
 end
